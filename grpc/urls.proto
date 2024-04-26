@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "myapp/grpc/urls";
+
+package urls;
+
+service Urls {
+  rpc GetSuspiciousUrl (GetUrlRequest) returns (GetUrlResponse) {}
+}
+
+message GetUrlRequest {
+}
+
+message GetUrlResponse {
+  string url = 1;
+}
+

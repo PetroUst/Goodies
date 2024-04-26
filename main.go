@@ -12,8 +12,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	_ "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"net/http"
+	"os"
+	pb "task2/grpc"
 )
 
 type Data struct {
@@ -26,6 +30,7 @@ func main() {
 	configServices()
 	http.HandleFunc("/post", postHandler)
 	http.HandleFunc("/get", getHandler)
+	http.HandleFunc("/suspicious", getSuspiciousUrl)
 	http.ListenAndServe(":8080", nil)
 
 	//config := sarama.NewConfig()
@@ -59,6 +64,7 @@ var (
 	redisDB         *redis.Client
 	mongoCollection *mongo.Collection
 	ctx             = context.Background()
+	grpcClient      pb.UrlsClient
 )
 
 func configServices() {
@@ -70,15 +76,21 @@ func configServices() {
 	}
 	mysqlDB.Exec("CREATE TABLE IF NOT EXISTS urls (domain VARCHAR(255) PRIMARY KEY, url VARCHAR(255))")
 
-	redisDB = redis.NewClient(&redis.Options{Addr: "redis:6379"})
+	redisDB = redis.NewClient(&redis.Options{Addr: os.Getenv("redis") + ":6379"})
 
-	mongoOptions := options.Client().ApplyURI("mongodb://mongo:27017").SetAuth(options.Credential{Username: "root", Password: "example"})
+	mongoOptions := options.Client().ApplyURI("mongodb://" + os.Getenv("mongo") + ":27017").SetAuth(options.Credential{Username: "root", Password: "example"})
 	client, err := mongo.Connect(ctx, mongoOptions)
 	if err != nil {
 		log.Fatalf("impossible to create the connection mongo: %s", err)
 	}
 	mongoCollection = client.Database("urls").Collection("urls")
 
+	conn, err := grpc.Dial("localhost:10000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to connect to gRPC server at "+os.Getenv("grpcServer")+":10000: %v", err)
+	}
+
+	grpcClient = pb.NewUrlsClient(conn)
 }
 
 func postHandler(w http.ResponseWriter, r *http.Request) {
@@ -141,4 +153,12 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(dataDB.Url))
 		return
 	}
+}
+
+func getSuspiciousUrl(w http.ResponseWriter, r *http.Request) {
+	response, err := grpcClient.GetSuspiciousUrl(context.Background(), &pb.GetUrlRequest{})
+	if err != nil {
+		log.Fatalf("error calling function GetSuspiciousUrl: %v", err)
+	}
+	w.Write([]byte(response.Url))
 }

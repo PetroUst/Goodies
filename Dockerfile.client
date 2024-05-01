@@ -4,9 +4,11 @@ WORKDIR /app
 
 COPY go.mod go.sum ./
 
+COPY main.go ./
+
+COPY grpc ./grpc
 RUN go mod download
 
-COPY . .
 
 RUN go build -o main .
 

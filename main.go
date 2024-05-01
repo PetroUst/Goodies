@@ -89,7 +89,7 @@ func configServices() {
 	}
 	mongoCollection = client.Database("urls").Collection("urls")
 
-	conn, err := grpc.Dial("localhost:10000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(os.Getenv("grpc")+":10000", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("failed to connect to gRPC server at "+os.Getenv("grpcServer")+":10000: %v", err)
 	}

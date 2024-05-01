@@ -1,1 +1,14 @@
-package main
+FROM golang:latest
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+
+COPY server ./server
+COPY grpc ./grpc
+RUN go mod download
+
+
+RUN go build -o main ./server
+
+CMD ["./main"]

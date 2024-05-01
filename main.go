@@ -68,13 +68,17 @@ var (
 )
 
 func configServices() {
-	mysqlConnection := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", "root", "1234", "mysql", 3306, "urls")
+	mysqlConnection := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", "root", "1234", os.Getenv("mysql"), 3306, "urls")
 	err := error(nil)
 	mysqlDB, err = sql.Open("mysql", mysqlConnection)
 	if err != nil {
 		log.Fatalf("impossible to create the connection mysql: %s", err)
 	}
-	mysqlDB.Exec("CREATE TABLE IF NOT EXISTS urls (domain VARCHAR(255) PRIMARY KEY, url VARCHAR(255))")
+	_, err = mysqlDB.Exec("CREATE TABLE IF NOT EXISTS urls (domain VARCHAR(255) PRIMARY KEY, url VARCHAR(255))")
+
+	if err != nil {
+		log.Fatalf("impossible to create the table mysql: %s", err)
+	}
 
 	redisDB = redis.NewClient(&redis.Options{Addr: os.Getenv("redis") + ":6379"})
 
@@ -103,7 +107,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = mysqlDB.Exec("INSERT INTO urls (domain, url) VALUES (?, ?) ON DUPLICATE KEY UPDATE url = VALUES(url)", data.Domain, data.Url)
 
 	if err != nil {
-		log.Printf("impossible to set the data mysql: ", err)
+		log.Printf("impossible to set the data mysql: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -158,7 +162,9 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 func getSuspiciousUrl(w http.ResponseWriter, r *http.Request) {
 	response, err := grpcClient.GetSuspiciousUrl(context.Background(), &pb.GetUrlRequest{})
 	if err != nil {
-		log.Fatalf("error calling function GetSuspiciousUrl: %v", err)
+		http.Error(w, "Service is not available now", http.StatusServiceUnavailable)
+		log.Printf("error calling function GetSuspiciousUrl: %v", err)
+		return
 	}
 	w.Write([]byte(response.Url))
 }

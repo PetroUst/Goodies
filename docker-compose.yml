@@ -59,8 +59,11 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
+
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.client
     ports:
       - 8080:8080
     depends_on:
@@ -69,3 +72,7 @@ services:
       - redis
       - kafka
       - zookeeper
+    environment:
+      mysql: mysql
+      mongo: mongo
+      redis: redis

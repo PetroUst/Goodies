@@ -31,7 +31,7 @@ func (s *server) GetSuspiciousUrl(ctx context.Context, in *pb.GetUrlRequest) (*p
 func main() {
 	lis, err := net.Listen("tcp", ":10000")
 	if err != nil {
-		log.Fatalf("failed to listen on port 50051: %v", err)
+		log.Fatalf("failed to listen on port 10000: %v", err)
 	}
 
 	s := grpc.NewServer()
